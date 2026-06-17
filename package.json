@@ -1,6 +1,6 @@
 {
   "name": "lz4-lite",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A lean, optimized, spec-compliant LZ4 (block + frame) codec in TypeScript — zero dependencies.",
   "license": "MIT",
   "author": "Alexander Vukov",
