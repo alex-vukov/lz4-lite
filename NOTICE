@@ -1,0 +1,20 @@
+lz4-lite
+Copyright (c) 2026 Alexander Vukov
+Licensed under the MIT License (see LICENSE).
+
+This is a clean-room implementation written from the published LZ4 format
+specifications. No third-party source code was copied. Attributions to prior
+art and the underlying format/algorithm:
+
+- LZ4 block & frame formats — Copyright (c) Yann Collet. The reference LZ4
+  implementation and format documentation are licensed under BSD 2-Clause.
+  Format specs:
+    https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md
+    https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md
+
+- xxHash (xxHash32), used for the LZ4 frame descriptor checksum —
+  Copyright (c) Yann Collet, BSD 2-Clause.
+    https://github.com/Cyan4973/xxHash
+
+- lz4js (https://github.com/Benzinga/lz4js), ISC-licensed, acknowledged as
+  prior art / inspiration. No code from lz4js was copied into this project.
