@@ -76,6 +76,9 @@ export function compressBlockInto(
   const sEnd = sStart + sLength;
   const mflimit = sEnd - MFLIMIT; // matches may only start before here
   const matchlimit = sEnd - LAST_LITERALS; // match extension stops here
+  // View over src for single-op 32-bit reads during match extension; indices
+  // are relative to src (the view spans src.byteOffset .. +byteLength).
+  const sv = new DataView(src.buffer, src.byteOffset, src.byteLength);
   let anchor = sStart; // start of the pending literal run
   let s = sStart;
   let searchMatchNb = 1 << SKIP_TRIGGER; // accelerated-skip counter
@@ -96,11 +99,28 @@ export function compressBlockInto(
     const offset = s - cand;
 
     // Extend the match forward (bounded by matchlimit = LAST_LITERALS rule).
+    // Word-at-a-time via a single DataView read per side; on a mismatch the
+    // lowest set bit of the XOR marks the first differing byte (LZ4 is
+    // little-endian, so the lowest byte is the earliest). Within 4 bytes of
+    // matchlimit, finish byte-by-byte.
     let mEnd = s + MIN_MATCH;
     let ref = cand + MIN_MATCH;
-    while (mEnd < matchlimit && src[mEnd] === src[ref]) {
-      mEnd++;
-      ref++;
+    for (;;) {
+      if (mEnd + 4 <= matchlimit) {
+        const diff = sv.getUint32(mEnd, true) ^ sv.getUint32(ref, true);
+        if (diff === 0) {
+          mEnd += 4;
+          ref += 4;
+          continue;
+        }
+        mEnd += (31 - Math.clz32(diff & -diff)) >> 3;
+        break;
+      }
+      while (mEnd < matchlimit && src[mEnd] === src[ref]) {
+        mEnd++;
+        ref++;
+      }
+      break;
     }
 
     dIndex = emitSequence(dst, dIndex, src, anchor, s - anchor, offset, mEnd - s - MIN_MATCH);
