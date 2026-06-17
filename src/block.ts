@@ -214,6 +214,10 @@ export function decompressBlockInto(
 ): number {
   let s = sStart;
   const sEnd = sStart + sLength;
+  // Views for single-op 32-bit copies; indices are relative to each buffer's
+  // start (the views span byteOffset .. +byteLength of src / dst respectively).
+  const sv = new DataView(src.buffer, src.byteOffset, src.byteLength);
+  const dv = new DataView(dst.buffer, dst.byteOffset, dst.byteLength);
 
   while (s < sEnd) {
     const token = src[s++];
@@ -231,8 +235,13 @@ export function decompressBlockInto(
     if (litLen > 0) {
       const e = s + litLen;
       if (e > sEnd) throw new Error('lz4-lite: literal run exceeds block');
-      // Compressed blocks have many short literal runs, so a tight byte loop
-      // beats the per-run overhead of subarray+set.
+      // Literals never overlap the output, so copy 4 bytes per step (one
+      // DataView op) and finish the remaining 1-3 bytes byte-by-byte.
+      while (s + 4 <= e) {
+        dv.setUint32(dIndex, sv.getUint32(s, true), true);
+        dIndex += 4;
+        s += 4;
+      }
       while (s < e) dst[dIndex++] = src[s++];
     }
 
@@ -260,10 +269,19 @@ export function decompressBlockInto(
       dst.fill(dst[dIndex - 1], dIndex, end);
       dIndex = end;
     } else if (matchLen < BULK_MATCH_MIN) {
-      // Short match: a tight byte loop beats copy-call overhead. Correct for
-      // overlap (offset < matchLen) since reads trail writes by `offset`.
+      // Short match: avoid copyWithin's per-call overhead. When offset >= 4 each
+      // 4-byte read trails the write by >= 4 bytes, so its source is already
+      // written even on overlap — copy a word at a time. offset 2-3 overlaps
+      // within a word, so it stays byte-by-byte.
       const end = dIndex + matchLen;
       let f = from;
+      if (offset >= 4) {
+        while (dIndex + 4 <= end) {
+          dv.setUint32(dIndex, dv.getUint32(f, true), true);
+          dIndex += 4;
+          f += 4;
+        }
+      }
       while (dIndex < end) dst[dIndex++] = dst[f++];
     } else {
       // Long match: copy a growing span with copyWithin. Each step copies only
