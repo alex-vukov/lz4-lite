@@ -6,6 +6,7 @@
   "author": "Alexander Vukov",
   "keywords": [
     "lz4",
+    "lz4js",
     "compression",
     "decompression",
     "codec",
