@@ -1,5 +1,3 @@
-// LZ4 block codec (clean-room, from the LZ4 block format spec).
-//
 // The matcher honours MFLIMIT (12) and LAST_LITERALS (5): no match starts within
 // the last 12 bytes and the final 5 bytes are always literals, so output decodes
 // in strict LZ4 decoders. The encoder always emits a valid block (literals-only
@@ -301,17 +299,17 @@ export function decompressBlockInto(
   return dIndex;
 }
 
-/** Ergonomic: compress `src` into a freshly allocated raw block. */
+/** Compress `src` into a freshly allocated raw block. */
 export function compressBlock(src: Uint8Array): Uint8Array {
   const dst = new Uint8Array(compressBound(src.length));
   const n = compressBlockInto(src, 0, src.length, dst, 0, clearedTable());
   return dst.slice(0, n);
 }
 
-/** Internal: a cleared, reusable match table for the frame codec. */
+/** A cleared, reusable match table for the frame codec. */
 export { clearedTable as scratchHashTable };
 
-/** Ergonomic: decompress a raw block into `expectedSize` bytes. */
+/** Decompress a raw block into `expectedSize` bytes. */
 export function decompressBlock(block: Uint8Array, expectedSize: number): Uint8Array {
   const dst = new Uint8Array(expectedSize);
   const n = decompressBlockInto(block, 0, block.length, dst, 0);

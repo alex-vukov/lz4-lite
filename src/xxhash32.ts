@@ -1,6 +1,5 @@
-// Clean-room xxHash32, implemented from the xxHash specification. Used solely
+// xxHash32, implemented from the xxHash specification. Used solely
 // for the LZ4 frame descriptor (header) checksum.
-//
 // Reference: https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md
 
 import { readU32 } from './binary.js';

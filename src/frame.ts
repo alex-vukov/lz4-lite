@@ -1,5 +1,3 @@
-// LZ4 frame codec (clean-room, from the LZ4 frame format spec).
-//
 // Emits version-01 frames with independent 4 MiB blocks and the mandatory header
 // checksum only. The decoder also accepts content size and block/content
 // checksums when present, and reads linked-block frames from standard LZ4 tools

@@ -2,7 +2,7 @@ lz4-lite
 Copyright (c) 2026 Alexander Vukov
 Licensed under the MIT License (see LICENSE).
 
-This is a clean-room implementation written from the published LZ4 format
+This is an implementation written from the published LZ4 format
 specifications. No third-party source code was copied. Attributions to prior
 art and the underlying format/algorithm:
 
