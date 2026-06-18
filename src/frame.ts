@@ -15,10 +15,12 @@ import {
   FLG_BLOCK_CHECKSUM,
   FLG_CONTENT_CHECKSUM,
   FLG_CONTENT_SIZE,
+  FLG_DICT_ID,
   FLG_VERSION,
   FLG_VERSION_MASK,
   FLG_WRITE,
   MAGIC,
+  MAX_BLOCK_EXPANSION,
 } from './constants.js';
 import { xxh32 } from './xxhash32.js';
 
@@ -84,25 +86,31 @@ export function decompressFrameInto(src: Uint8Array, dst: Uint8Array): number {
   const hasContentSize = (flg & FLG_CONTENT_SIZE) !== 0;
   const hasBlockChecksum = (flg & FLG_BLOCK_CHECKSUM) !== 0;
   const hasContentChecksum = (flg & FLG_CONTENT_CHECKSUM) !== 0;
+  const hasDictId = (flg & FLG_DICT_ID) !== 0;
 
   if (hasContentSize) s += 8;
+  if (hasDictId) s += 4; // optional dictionary ID (value ignored — no dict decode)
   s += 1; // header checksum
 
   let d = 0;
   for (;;) {
-    let blockSize = readU32(src, s);
+    if (s + 4 > src.length) throw new Error('lz4-lite: truncated frame');
+    const blockSize = readU32(src, s);
     s += 4;
     if (blockSize === 0) break; // end marker
 
-    if ((blockSize & BLOCK_UNCOMPRESSED_FLAG) !== 0) {
-      blockSize &= 0x7fffffff;
-      dst.set(src.subarray(s, s + blockSize), d);
-      d += blockSize;
-      s += blockSize;
+    const stored = (blockSize & BLOCK_UNCOMPRESSED_FLAG) !== 0;
+    const payloadLen = blockSize & 0x7fffffff;
+    if (s + payloadLen > src.length) throw new Error('lz4-lite: truncated frame');
+
+    if (stored) {
+      if (d + payloadLen > dst.length) throw new Error('lz4-lite: output buffer too small');
+      dst.set(src.subarray(s, s + payloadLen), d);
+      d += payloadLen;
     } else {
-      d = decompressBlockInto(src, s, blockSize, dst, d);
-      s += blockSize;
+      d = decompressBlockInto(src, s, payloadLen, dst, d);
     }
+    s += payloadLen;
     if (hasBlockChecksum) s += 4;
   }
   if (hasContentChecksum) s += 4;
@@ -126,23 +134,31 @@ export function decompressBound(src: Uint8Array): number {
 
   const hasContentSize = (flg & FLG_CONTENT_SIZE) !== 0;
   const hasBlockChecksum = (flg & FLG_BLOCK_CHECKSUM) !== 0;
+  const hasDictId = (flg & FLG_DICT_ID) !== 0;
 
   if (hasContentSize) {
-    return readU64(src, s);
+    return readU64(src, s); // content size sits before the optional dictID
   }
+  if (hasDictId) s += 4;
   s += 1; // header checksum
 
   let size = 0;
   for (;;) {
+    if (s + 4 > src.length) break;
     const blockSize = readU32(src, s);
     s += 4;
     if (blockSize === 0) break;
+    const payloadLen = blockSize & 0x7fffffff;
+    if (s + payloadLen > src.length) throw new Error('lz4-lite: truncated frame');
     if ((blockSize & BLOCK_UNCOMPRESSED_FLAG) !== 0) {
-      size += blockSize & 0x7fffffff;
+      size += payloadLen;
     } else {
-      size += maxBlockSize;
+      // A compressed block decodes to at most maxBlockSize (conformant) and at
+      // most ~255x its payload — the latter keeps the bound proportional to input
+      // so crafted headers can't inflate it into a huge allocation.
+      size += Math.min(maxBlockSize, payloadLen * MAX_BLOCK_EXPANSION);
     }
-    s += (blockSize & 0x7fffffff) + (hasBlockChecksum ? 4 : 0);
+    s += payloadLen + (hasBlockChecksum ? 4 : 0);
   }
   return size;
 }

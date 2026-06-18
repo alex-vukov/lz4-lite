@@ -30,6 +30,14 @@ export const FLG_BLOCK_INDEP = 0x20;
 export const FLG_BLOCK_CHECKSUM = 0x10;
 export const FLG_CONTENT_SIZE = 0x08;
 export const FLG_CONTENT_CHECKSUM = 0x04;
+export const FLG_DICT_ID = 0x01; // bit 0: a 4-byte dictionary ID follows the header fields
+
+// Worst-case expansion of a compressed block: it decodes to at most ~255x its
+// payload (a long match costs ~1 input byte per 255 output bytes; literals
+// expand 1:1; multiple sequences are strictly less dense). Used to keep
+// `decompressBound` proportional to input on crafted/garbage headers, while
+// never under-estimating a conformant block's decoded size.
+export const MAX_BLOCK_EXPANSION = 255;
 
 // Block descriptor: bits 6-4 select the maximum block size.
 export const BD_BLOCK_MAX_SHIFT = 4;
