@@ -37,6 +37,14 @@
     "node": ">=14"
   },
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alex-vukov/lz4-lite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alex-vukov/lz4-lite/issues"
+  },
+  "homepage": "https://github.com/alex-vukov/lz4-lite#readme",
   "scripts": {
     "clean": "rm -rf dist",
     "build:esm": "tsc -p tsconfig.esm.json",

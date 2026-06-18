@@ -1,4 +1,4 @@
-# lz4-lite
+# LZ4 Lite
 
 A lean, **spec-compliant** [LZ4](https://lz4.org) codec (block + frame) in
 TypeScript. Zero dependencies, dual **ESM + CommonJS** builds with type
